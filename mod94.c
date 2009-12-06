@@ -41,9 +41,7 @@ int handle_char(char in_char){
     static int windx = 0;
     static int clindx = 0;
     int i, got_gap;
-    if(charwin == NULL){
-	charwin = newwin(LINES, WINDIV, 0, 0);
-    }
+    if(charwin == NULL) charwin = newwin(LINES, WINDIV, 0, 0);
     
     // add char to whold
     whold[windx++] = in_char;
@@ -89,13 +87,19 @@ int start_anim(unsigned int seconds){
 void draws(int sig){
     static WINDOW *vizwin = NULL;
     static int idx = 0;
-    int printed_space = 0;
-    if(vizwin == NULL){
-	vizwin = newwin(LINES, COLS - WINDIV, 0, WINDIV);
+    int i;
+    if(vizwin == NULL) vizwin = newwin(LINES, COLS - WINDIV, 0, WINDIV);
+
+    wclear(vizwin);
+    for(i = 0; i < NFOUR; i++){
+	mvwprintw(vizwin, 0, i, "%c", chlist[i]);
+	mvwprintw(vizwin, 1, i, "%d", i % 10);
     }
+    wrefresh(vizwin);
+
+    /*
     // kind of wasting time here, but I want to make sure
     // I'm cycling through arrays correctly
-
     if(chlist[idx] != '\0'){
 	if(chlist[idx] == ' '){
 	    while(chlist[idx + 1] == ' '){
@@ -107,5 +111,6 @@ void draws(int sig){
     }else{
 	if(idx != 0) idx = 0;
     }
+    */
     signal(sig, draws);
 }
