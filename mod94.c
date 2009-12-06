@@ -42,12 +42,12 @@ int handle_char(char in_char){
     static int clindx = 0;
     int i, got_gap;
     if(charwin == NULL) charwin = newwin(LINES, WINDIV, 0, 0);
-    
+    if(in_char == 127) return 0; // NO DELETE (we aint no text editor) 
+
     // add char to whold
     whold[windx++] = in_char;
     windx %= WLEN;
     if(in_char == ' '){
-	//wprintw(charwin, "%d", clindx);
 	// copy word to chlist, and clear whold
 	for(i = 0; i < windx; i++){
 	    chlist[clindx++] = whold[i];
