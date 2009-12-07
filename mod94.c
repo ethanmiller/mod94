@@ -84,6 +84,29 @@ int start_anim(unsigned int seconds){
     return 0;
 }
 
+/*
+ * Drawing rules:
+ * The idea here is that each 'word' is a program that creates a pattern.
+ * A word is any string of characters, space separated.
+ * NOTE: The set of characters I'm using starts with 32 (space) and goes to 
+ * 126 (~) - that's 94 chars.
+ * The word can be of any length (loops back to the first character if the word 
+ * isn't long enough), and the settings affected are determined
+ * by the character at each position - as follows:
+ *
+ * 0 - The value of the character at this position determines what quadrant
+ * the animation starts from, (char - 32)/94 * 4
+ *
+ * 1 - Determines the rate of animation.. (?)
+ *
+ * 2,3,4 - Determine RGB colors 
+ *
+ * All subsequent - Determine a set of jumps for the next character to print out. 
+ * For example : a is 97, minus 32 is 65 - jump 65 (with % 94) gets us 36, add 32 
+ * for 68 = D. The next char (if we haven't looped back to the beginning already) 
+ * starts the process again at 68.
+ */
+
 void draws(int sig){
     static WINDOW *vizwin = NULL;
     static int idx = 0;
