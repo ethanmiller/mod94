@@ -11,9 +11,12 @@
 void draws(int);
 int handle_char(char in_char);
 
-char chlist[NFOUR] = {'\0'};
-char whold[WLEN] = {'\0'};
-int poslist[NFOUR] = {0};
+struct cs{
+    char chlist[NFOUR];
+    char whold[WLEN];
+    int poslist[NFOUR];
+}; 
+struct cs charstor = {{'\0'}, {'\0'}, {0}};
 
 int main(){
     char ch;
@@ -45,24 +48,26 @@ int handle_char(char in_char){
     if(in_char == 127) return 0; // NO DELETE (we aint no text editor) 
 
     // add char to whold
-    whold[windx++] = in_char;
+    charstor.whold[windx++] = in_char;
     windx %= WLEN;
     if(in_char == ' '){
 	// copy word to chlist, and clear whold
+	charstor.poslist[clindx] = 0; // x
+	charstor.poslist[(clindx + 1) % NFOUR] = 0; // y
 	for(i = 0; i < windx; i++){
-	    chlist[clindx++] = whold[i];
+	    charstor.chlist[clindx++] = charstor.whold[i];
 	    clindx %= NFOUR;
-	    whold[i] = '\0';
+	    charstor.whold[i] = '\0';
 	}
 	// since we're prob overwriting prev words,
 	// clear till we get to a gap
 	got_gap = 0;
 	i = clindx;
 	while(!got_gap){
-	   if(chlist[i] == '\0' || chlist[i] == ' '){
+	   if(charstor.chlist[i] == '\0' || charstor.chlist[i] == ' '){
 	       got_gap = 1;
 	   }else{
-	       chlist[i++] = ' ';
+	       charstor.chlist[i++] = ' ';
 	       i %= NFOUR;
 	   } 
 	}
@@ -102,38 +107,23 @@ int start_anim(unsigned int seconds){
  * 2,3,4 - Determine RGB colors 
  *
  * All subsequent - Determine a set of jumps for the next character to print out. 
- * For example : a is 97, minus 32 is 65 - jump 65 (with % 94) gets us 36, add 32 
+ * For example : a is 97, minus 32 is 65. So jump 65 (with % 94) gets us 36, add 32 
  * for 68 = D. The next char (if we haven't looped back to the beginning already) 
  * starts the process again at 68.
  */
 
 void draws(int sig){
     static WINDOW *vizwin = NULL;
-    static int idx = 0;
+    static char wrd[WLEN];
     int i;
     if(vizwin == NULL) vizwin = newwin(LINES, COLS - WINDIV, 0, WINDIV);
 
     wclear(vizwin);
+    // fish out each word, and it's xy position
     for(i = 0; i < NFOUR; i++){
-	mvwprintw(vizwin, 0, i, "%c", chlist[i]);
+	mvwprintw(vizwin, 0, i, "%c", charstor.chlist[i]);
 	mvwprintw(vizwin, 1, i, "%d", i % 10);
     }
     wrefresh(vizwin);
-
-    /*
-    // kind of wasting time here, but I want to make sure
-    // I'm cycling through arrays correctly
-    if(chlist[idx] != '\0'){
-	if(chlist[idx] == ' '){
-	    while(chlist[idx + 1] == ' '){
-		idx++;
-	    }
-	}
-	wprintw(vizwin, "%c", chlist[idx++]);
-	wrefresh(vizwin);
-    }else{
-	if(idx != 0) idx = 0;
-    }
-    */
     signal(sig, draws);
 }
