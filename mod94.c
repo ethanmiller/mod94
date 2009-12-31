@@ -4,30 +4,43 @@
 
 #define WINDIV 30
 #define INTRVL 41666 // approx 24 times a second
-#define NFOUR 94
+#define WRDS 10
 #define WLEN 15
 
 
 void draws(int);
 int handle_char(char in_char);
 
-struct cs{
-    char chlist[NFOUR];
-    char whold[WLEN];
-    int poslist[NFOUR];
+struct wordstor{
+    char cwords[WRDS][WLEN];
+    int poslist[WRDS][3];
 }; 
-struct cs charstor = {{'\0'}, {'\0'}, {0}};
+struct wordstor words;
 
 int main(){
     char ch;
+    int i, ii;
+    //init wordstor struct
+    for(i = 0; i < WRDS; i++){
+	clear_word(i);
+	words.poslist[i][0] = 0;
+	words.poslist[i][1] = 0;
+	words.poslist[i][2] = 0;
+    }
     setup();
     while(1){
-	ch = getch();
-	handle_char(ch);
+	handle_char(getch());
     }
     endwin();
     return 0;
     // for scrolling see http://www.mkssoftware.com/docs/man3/curs_scroll.3.asp
+}
+
+int clear_word(int windx){
+    int i;
+    for(i = 0; i < WLEN; i++){
+	words.cwords[windx][i] = '\0';
+    }
 }
 
 int setup(){
@@ -42,37 +55,19 @@ int setup(){
 int handle_char(char in_char){
     static WINDOW *charwin = NULL;
     static int windx = 0;
-    static int clindx = 0;
-    int i, got_gap;
+    static int chindx = 0;
     if(charwin == NULL) charwin = newwin(LINES, WINDIV, 0, 0);
-    if(in_char == 127) return 0; // NO DELETE (we aint no text editor) 
+    if(in_char == 127) return 0; // NO DELETE
 
-    // add char to whold
-    charstor.whold[windx++] = in_char;
-    windx %= WLEN;
+    // add char to current word
+    words.cwords[windx][chindx++] = in_char;
+    chindx %= WLEN;
     if(in_char == ' '){
-	// copy word to chlist, and clear whold
-	charstor.poslist[clindx] = 0; // x
-	charstor.poslist[(clindx + 1) % NFOUR] = 0; // y
-	for(i = 0; i < windx; i++){
-	    charstor.chlist[clindx++] = charstor.whold[i];
-	    clindx %= NFOUR;
-	    charstor.whold[i] = '\0';
-	}
-	// since we're prob overwriting prev words,
-	// clear till we get to a gap
-	got_gap = 0;
-	i = clindx;
-	while(!got_gap){
-	   if(charstor.chlist[i] == '\0' || charstor.chlist[i] == ' '){
-	       got_gap = 1;
-	   }else{
-	       charstor.chlist[i++] = ' ';
-	       i %= NFOUR;
-	   } 
-	}
-	// start new word in whold
-	windx = 0;
+	chindx = 0;
+	windx++;
+	windx %= WRDS;
+	// clear in case we've used this array before
+	clear_word(windx);
     }
     wprintw(charwin, "%c", in_char);
     wrefresh(charwin);
@@ -114,15 +109,16 @@ int start_anim(unsigned int seconds){
 
 void draws(int sig){
     static WINDOW *vizwin = NULL;
-    static char wrd[WLEN];
-    int i;
+    int i, ii;
     if(vizwin == NULL) vizwin = newwin(LINES, COLS - WINDIV, 0, WINDIV);
 
     wclear(vizwin);
     // fish out each word, and it's xy position
-    for(i = 0; i < NFOUR; i++){
-	mvwprintw(vizwin, 0, i, "%c", charstor.chlist[i]);
-	mvwprintw(vizwin, 1, i, "%d", i % 10);
+    for(i = 0; i < WRDS; i++){
+	for(ii = 0; ii < WLEN; ii++){
+	    mvwprintw(vizwin, i, ii, "%c", words.cwords[i][ii]);
+	}
+	mvwprintw(vizwin, i, WLEN + 1, "%d", i % 10);
     }
     wrefresh(vizwin);
     signal(sig, draws);
