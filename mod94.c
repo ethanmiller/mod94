@@ -8,13 +8,14 @@
 #define WRDS 10
 #define WLEN 15
 // these are indexes for wrules values
-#define RULE_START 0
-#define RULE_X 1
-#define RULE_Y 2
-#define RULE_R 3
-#define RULE_G 4
-#define RULE_B 5
-#define RULE_CT 6
+#define RULE_WLEN 0
+#define RULE_START 1
+#define RULE_X 2
+#define RULE_Y 3
+#define RULE_R 4
+#define RULE_G 5
+#define RULE_B 6
+#define RULE_CT 7
 
 
 void draws(int);
@@ -66,15 +67,20 @@ int handle_char(char in_char){
     if(in_char > 126 || in_char < 32) return 0;
 
     // add char to current word
-    words.cwords[windx][chindx++] = in_char;
-    chindx %= WLEN;
+    words.cwords[windx][chindx] = in_char;
     if(in_char == ' '){
-	chindx = 0;
-	extract_config(windx);
-	windx++;
-	windx %= WRDS;
-	// clear in case we've used this array before
-	clear_word(windx);
+	if(chindx > 0){ 
+	    // meaning: we've already got some nonspace word going
+	    chindx = 0;
+	    extract_config(windx, chindx);
+	    windx++;
+	    windx %= WRDS;
+	    // clear in case we've used this array before
+	    clear_word(windx);
+	}
+    }else{
+	chindx++;
+	chindx %= WLEN;
     }
     wprintw(charwin, "%c", in_char);
     wrefresh(charwin);
@@ -113,43 +119,45 @@ int start_anim(unsigned int seconds){
  * starts the process again at 68.
  */
 
-int extract_config(int i){
+int extract_config(int iw, int ic){
     // extracts the rules for a word, stores them in wrules
     int cpos = 0;
+    // Length of word
+    words.wrules[iw][RULE_WLEN] = ic + 1;
     // Starting position 0 - 3
-    words.wrules[i][RULE_START] = floor(((float)words.cwords[i][cpos] - 31)/96 * 4);
-    add_one_mod(&cpos, i); // ***
+    words.wrules[iw][RULE_START] = floor(((float)words.cwords[iw][cpos] - 31)/96 * 4);
+    add_one_mod(&cpos, iw); // ***
     // Based on the starting position, set x and y
-    switch(words.wrules[i][0]){
+    switch(words.wrules[iw][0]){
 	case 0:
 	    // upper left
-	    words.wrules[i][RULE_X] = 0;
-	    words.wrules[i][RULE_Y] = 0;
+	    words.wrules[iw][RULE_X] = 0;
+	    words.wrules[iw][RULE_Y] = 0;
 	    break;
 	case 1:
 	    // upper right
-	    words.wrules[i][RULE_X] = COLS - WINDIV;
-	    words.wrules[i][RULE_Y] = 0;
+	    words.wrules[iw][RULE_X] = COLS - WINDIV;
+	    words.wrules[iw][RULE_Y] = 0;
 	    break;
 	case 2:
 	    // lower right
-	    words.wrules[i][RULE_X] = COLS - WINDIV;
-	    words.wrules[i][RULE_Y] = LINES;
+	    words.wrules[iw][RULE_X] = COLS - WINDIV;
+	    words.wrules[iw][RULE_Y] = LINES;
 	    break;
 	case 3:
 	    // lower left
-	    words.wrules[i][RULE_X] = 0;
-	    words.wrules[i][RULE_Y] = LINES;
+	    words.wrules[iw][RULE_X] = 0;
+	    words.wrules[iw][RULE_Y] = LINES;
 	    break;
     }
     // Red
-    words.wrules[i][RULE_R] = floor(((float)words.cwords[i][cpos] - 31)/96 * 1000);
-    add_one_mod(&cpos, i); // ***
+    words.wrules[iw][RULE_R] = floor(((float)words.cwords[iw][cpos] - 31)/96 * 1000);
+    add_one_mod(&cpos, iw); // ***
     // Green
-    words.wrules[i][RULE_G] = floor(((float)words.cwords[i][cpos] - 31)/96 * 1000);
-    add_one_mod(&cpos, i); // ***
+    words.wrules[iw][RULE_G] = floor(((float)words.cwords[iw][cpos] - 31)/96 * 1000);
+    add_one_mod(&cpos, iw); // ***
     // Blue
-    words.wrules[i][RULE_B] = floor(((float)words.cwords[i][cpos] - 31)/96 * 1000);
+    words.wrules[iw][RULE_B] = floor(((float)words.cwords[iw][cpos] - 31)/96 * 1000);
     return 0;
 }
 
@@ -167,7 +175,6 @@ void draws(int sig){
     if(vizwin == NULL) vizwin = newwin(LINES, COLS - WINDIV, 0, WINDIV);
 
     wclear(vizwin);
-    // fish out each word, and it's xy position
     for(i = 0; i < WRDS; i++){
 	for(ii = 0; ii < WLEN; ii++){
 	    mvwprintw(vizwin, i, ii, "%c", words.cwords[i][ii]);
