@@ -3,10 +3,10 @@
 #include <signal.h>
 #include <math.h>
 
-#define WINDIV 30
+#define WINDIV 20
 #define INTRVL 41666 // approx 24 times a second
 #define WRDS 10
-#define WLEN 15
+#define WLEN 20
 // these are indexes for wrules values
 #define RULE_WLEN 0
 #define RULE_START 1
@@ -66,26 +66,29 @@ int handle_char(char in_char){
     static WINDOW *charwin = NULL;
     static int windx = 0;
     static int chindx = 0;
+    static int line = 0;
+    static int got_non_space = 0;
     if(charwin == NULL) charwin = newwin(LINES, WINDIV, 0, 0);
     if(in_char > 126 || in_char < 32) return 0;
 
     // add char to current word
     words.cwords[windx][chindx] = in_char;
     if(in_char == ' '){
-	if(chindx > 0){ 
-	    // meaning: we've already got some nonspace word going
+	if(got_non_space){ 
 	    extract_config(windx, chindx);
 	    chindx = 0;
 	    windx++;
 	    windx %= WRDS;
 	    // clear in case we've used this array before
 	    clear_word(windx);
+	    line++;
+	    got_non_space = 0;
 	}
     }else{
-	chindx++;
+	got_non_space = 1;
+	mvwaddch(charwin, line, chindx++, in_char);
 	chindx %= WLEN;
     }
-    wprintw(charwin, "%c", in_char);
     wrefresh(charwin);
     return 0;
 }
