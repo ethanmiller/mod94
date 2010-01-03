@@ -15,7 +15,10 @@
 #define RULE_R 4
 #define RULE_G 5
 #define RULE_B 6
-#define RULE_CT 7
+#define RULE_DX 7
+#define RULE_DY 8
+#define RULE_FIN 9
+#define RULE_CT 10
 
 
 void draws(int);
@@ -71,8 +74,8 @@ int handle_char(char in_char){
     if(in_char == ' '){
 	if(chindx > 0){ 
 	    // meaning: we've already got some nonspace word going
-	    chindx = 0;
 	    extract_config(windx, chindx);
+	    chindx = 0;
 	    windx++;
 	    windx %= WRDS;
 	    // clear in case we've used this array before
@@ -128,26 +131,34 @@ int extract_config(int iw, int ic){
     words.wrules[iw][RULE_START] = floor(((float)words.cwords[iw][cpos] - 31)/96 * 4);
     add_one_mod(&cpos, iw); // ***
     // Based on the starting position, set x and y
-    switch(words.wrules[iw][0]){
+    switch(words.wrules[iw][RULE_START]){
 	case 0:
 	    // upper left
 	    words.wrules[iw][RULE_X] = 0;
+	    words.wrules[iw][RULE_DX] = 1;
 	    words.wrules[iw][RULE_Y] = 0;
+	    words.wrules[iw][RULE_DY] = 1;
 	    break;
 	case 1:
-	    // upper right
-	    words.wrules[iw][RULE_X] = COLS - WINDIV;
-	    words.wrules[iw][RULE_Y] = 0;
+	    // lower left
+	    words.wrules[iw][RULE_X] = 0;
+	    words.wrules[iw][RULE_DX] = 1;
+	    words.wrules[iw][RULE_Y] = LINES - 1;
+	    words.wrules[iw][RULE_DY] = -1;
 	    break;
 	case 2:
 	    // lower right
 	    words.wrules[iw][RULE_X] = COLS - WINDIV;
-	    words.wrules[iw][RULE_Y] = LINES;
+	    words.wrules[iw][RULE_DX] = -1;
+	    words.wrules[iw][RULE_Y] = LINES - 1;
+	    words.wrules[iw][RULE_DY] = -1;
 	    break;
 	case 3:
-	    // lower left
-	    words.wrules[iw][RULE_X] = 0;
-	    words.wrules[iw][RULE_Y] = LINES;
+	    // upper right
+	    words.wrules[iw][RULE_X] = COLS - WINDIV;
+	    words.wrules[iw][RULE_DX] = -1;
+	    words.wrules[iw][RULE_Y] = 0;
+	    words.wrules[iw][RULE_DY] = 1;
 	    break;
     }
     // Red
@@ -158,6 +169,8 @@ int extract_config(int iw, int ic){
     add_one_mod(&cpos, iw); // ***
     // Blue
     words.wrules[iw][RULE_B] = floor(((float)words.cwords[iw][cpos] - 31)/96 * 1000);
+    // Not finished
+    words.wrules[iw][RULE_FIN] = 0;
     return 0;
 }
 
@@ -172,14 +185,34 @@ int add_one_mod(int *ichar, int iword){
 void draws(int sig){
     static WINDOW *vizwin = NULL;
     int i, ii;
+    int xpos, ypos;
     if(vizwin == NULL) vizwin = newwin(LINES, COLS - WINDIV, 0, WINDIV);
 
-    wclear(vizwin);
+    //wclear(vizwin);
     for(i = 0; i < WRDS; i++){
-	for(ii = 0; ii < WLEN; ii++){
-	    mvwprintw(vizwin, i, ii, "%c", words.cwords[i][ii]);
+	if(words.wrules[i][RULE_FIN]) continue;
+
+	xpos = words.wrules[i][RULE_X];
+	ypos = words.wrules[i][RULE_Y];
+	for(ii = 0; ii < words.wrules[i][RULE_WLEN]; ii++){
+	    mvwaddch(vizwin, ypos, xpos, words.cwords[i][ii]);
+	    xpos += words.wrules[i][RULE_DX];
+	    if(xpos <= 0 || xpos >= (COLS - WINDIV)){
+		ypos += words.wrules[i][RULE_DY];
+		if(words.wrules[i][RULE_START] > 1){
+		    xpos = COLS - WINDIV;
+		}else{
+		    xpos = 0;
+		}
+	    }
+	    // update wrules
+	    words.wrules[i][RULE_X] = xpos;
+	    words.wrules[i][RULE_Y] = ypos;
+	    // off the screen ?
+	    if(ypos < 0 || ypos > LINES){
+		words.wrules[i][RULE_FIN] = 1;
+	    }
 	}
-	mvwprintw(vizwin, i, WLEN + 1, "%d", i % 10);
     }
     wrefresh(vizwin);
     signal(sig, draws);
