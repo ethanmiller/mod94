@@ -31,7 +31,6 @@ struct wordstor{
 struct wordstor words;
 
 int main(){
-    char ch;
     int i;
     //init wordstor struct
     for(i = 0; i < WRDS; i++){
@@ -68,6 +67,7 @@ int handle_char(char in_char){
     static int chindx = 0;
     static int line = 0;
     static int got_non_space = 0;
+    static int word_len = 0;
     if(charwin == NULL) charwin = newwin(LINES, WINDIV, 0, 0);
     if(in_char > 126 || in_char < 32) return 0;
 
@@ -75,7 +75,8 @@ int handle_char(char in_char){
     words.cwords[windx][chindx] = in_char;
     if(in_char == ' '){
 	if(got_non_space){ 
-	    extract_config(windx, chindx);
+	    // ending a word here, reset for next word
+	    extract_config(windx, word_len);
 	    chindx = 0;
 	    windx++;
 	    windx %= WRDS;
@@ -83,11 +84,14 @@ int handle_char(char in_char){
 	    clear_word(windx);
 	    line++;
 	    got_non_space = 0;
+	    word_len = 0;
 	}
     }else{
+	// got a non space character, just print to screen
 	got_non_space = 1;
 	mvwaddch(charwin, line, chindx++, in_char);
 	chindx %= WLEN;
+	if(word_len < WLEN - 1) word_len++;
     }
     wrefresh(charwin);
     return 0;
@@ -107,7 +111,7 @@ int start_anim(unsigned int seconds){
  * Drawing rules:
  * The idea here is that each 'word' is a program that creates a pattern.
  * A word is any string of characters, space separated.
- * NOTE: The set of characters I'm using starts with 32 (space) and goes to 
+ * The set of characters I'm using starts with 32 (space) and goes to 
  * 126 (~) - that's 94 chars.
  * The word can be of any length (loops back to the first character if the word 
  * isn't long enough), and the settings affected are determined
@@ -119,10 +123,6 @@ int start_anim(unsigned int seconds){
  *
  * 1,2,3 - Determine RGB colors 
  *
- * All subsequent - Determine a set of jumps for the next character to print out. 
- * For example : a is 97, minus 32 is 65. So jump 65 (with % 94) gets us 36, add 32 
- * for 68 = D. The next char (if we haven't looped back to the beginning already) 
- * starts the process again at 68.
  */
 
 int extract_config(int iw, int ic){
@@ -194,7 +194,7 @@ void draws(int sig){
     //wclear(vizwin);
     for(i = 0; i < WRDS; i++){
 	if(words.wrules[i][RULE_FIN]) continue;
-
+	// set position from wrules
 	xpos = words.wrules[i][RULE_X];
 	ypos = words.wrules[i][RULE_Y];
 	for(ii = 0; ii < words.wrules[i][RULE_WLEN]; ii++){
@@ -208,7 +208,7 @@ void draws(int sig){
 		    xpos = 0;
 		}
 	    }
-	    // update wrules
+	    // update wrules pos
 	    words.wrules[i][RULE_X] = xpos;
 	    words.wrules[i][RULE_Y] = ypos;
 	    // off the screen ?
